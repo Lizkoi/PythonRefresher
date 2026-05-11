@@ -1,58 +1,55 @@
-# Load the mtcars dataset
 data(mtcars)
-# attach(mtcars) # Optional, but requested in prompt
-
-# a) Linear model
-# Fit a linear model with mpg as the dependent variable and wt and hp as the independent variables.
-model <- lm(mpg ~ wt + hp, data = mtcars)
-
-# Display the summary of the model
+attach(mtcars)
+model <- lm(mpg~wt+hp,data=mtcars)
 summary(model)
+# Fitted model equation:
+# mpg= 37.22727- 3.87783*wt -0.03177*hp
 
-# (i) The fitted model can be written as:
-# mpg = 37.227 - 3.878 * wt - 0.032 * hp
+# a) Linear model checks
 
-# (ii) Significance at 5% level:
-# The F-statistic is 69.21 with a p-value of 9.109e-12, which is < 0.05.
-# Thus, the model is significant.
+# linearity
+plot(wt,mpg, main='mpg vs wt', pch=19,col='green')
+abline(lm(mpg~wt),col='yellow',lwd=2)
+plot(hp,mpg,main='mpg vs hp', pch=19,col='pink')
+abline(lm(mpg~hp),col='blue',lwd=2)
+plot(model,which=1)
 
-# (iii) Interpretation of regression coefficients:
-# Intercept (37.227): The predicted mpg for a car with 0 weight and 0 horsepower.
-# wt (-3.878): For each 1000lb increase in weight, mpg decreases by 3.878, holding hp constant.
-# hp (-0.032): For each unit increase in horsepower, mpg decreases by 0.032, holding wt constant.
+# independence of errors
+library(car)
+durbinWatsonTest(model)
+acf(residuals(model))
 
-# (iv) R-squared and Adjusted R-squared:
-# R-squared (0.8268): 82.68% of the variance in mpg is explained by wt and hp.
-# Adjusted R-squared (0.8148): Adjusts R-squared for the number of predictors.
+# constant variance(homoscedasticity)
+library(lmtest)
+bptest(model)
+plot(model,which=3)
 
-# b) Regression assumptions
-
-# Set up a 2x2 grid for plots
-par(mfrow = c(2, 2))
-
-# 1. Linearity: Residuals vs Fitted plot
-plot(model, which = 1)
-# Interpretation: Points should be randomly scattered around the horizontal line.
-
-# 2. Independence of errors:
-# A plot of residuals vs order can be used.
-plot(residuals(model), type = 'b', main = "Residuals vs Order", ylab = "Residuals")
-# Alternatively, use Durbin-Watson test if library(car) is available
-# library(car)
-# durbinWatsonTest(model)
-
-# 3. Constant variance (Homoscedasticity): Scale-Location plot
-plot(model, which = 3)
-# Interpretation: The line should be approximately horizontal.
-
-# 4. Normality of residuals: Normal Q-Q plot
-plot(model, which = 2)
-# Interpretation: Points should follow the diagonal dashed line.
+# normality of residuals
 shapiro.test(residuals(model))
+plot(model,which=2)
+hist(residuals(model),freq=FALSE,breaks=12)
+curve(dnorm(x,mean=mean(residuals(model)),sd=sd(residuals(model))),add=TRUE,col='purple')
 
-# 5. Multicollinearity:
-# Using Variance Inflation Factor (VIF)
-# library(car)
-# vif(model)
-# For 2 predictors, we can also check correlation:
-cor(mtcars$wt, mtcars$hp)
+# MULTICOLLINEARITY
+library(car)
+vif(model)
+1/vif(model)
+mean(vif(model))
+cor(mtcars[,c('wt','hp')])
+
+# CASE DIAGNOSTICS
+std_resid<-rstandard(model)
+std_resid
+cooks_d<-cooks.distance(model)
+cooks_d
+leverage<-hatvalues(model)
+leverage
+cvr<-covratio(model)
+cvr
+
+par(mfrow=c(2,2))
+plot(std_resid);abline(h=c(-2,2),col="pink")
+plot(cooks_d);abline(h=4/30,col="purple")
+plot(leverage,cooks_d);abline(h=4/30,col="yellow")
+plot(cvr);abline(h=1,col="pink")
+par(mfrow=c(1,1))
