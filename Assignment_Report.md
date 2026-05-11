@@ -120,27 +120,33 @@ The VIF for both `wt` and `hp` is **1.767**.
 ---
 
 ## 4. Case Diagnostics
-We examine influential observations using Studentized Residuals, Cook's Distance, Leverage, and COVRATIO.
+We examine influential observations using Standardized Residuals, Cook's Distance, Leverage (Hat values), and Covariance Ratio (COVRATIO).
 
 ```r
-std_resid <- rstandard(model)
-cooks_d <- cooks.distance(model)
-leverage <- hatvalues(model)
-cvr <- covratio(model)
+# 1. Standard residuals
+std_res <- rstandard(model)
 
-par(mfrow=c(2,2))
-plot(std_resid); abline(h=c(-2,2), col="pink")
-plot(cooks_d); abline(h=4/32, col="purple")
-plot(leverage, cooks_d); abline(h=4/32, col="yellow")
-plot(cvr); abline(h=1, col="pink")
+# 2. Cook's distance
+cooksd <- cooks.distance(model)
+plot(cooksd, type = 'h', main = "Cook's Distance")
+abline(h = 4/nrow(mtcars), col = 'red', lty = 2)
+
+# 3. Leverage (Hat values)
+leverage <- hatvalues(model)
+plot(leverage, type = 'h', main = 'Leverage Values')
+abline(h = 2 * (2 + 1) / nrow(mtcars), col = 'blue', lty = 2)
+
+# 4. Covariance ratio
+cvr <- covratio(model)
 ```
 
 ![Case Diagnostics](case_diagnostics.png)
 
 **Interpretation:**
-- **Standardized Residuals:** Most residuals fall between -2 and 2, indicating no major outliers.
-- **Cook's Distance:** Observations with a Cook's D greater than $4/n$ ($4/32 = 0.125$) might be influential. A few points are near or slightly above this threshold.
-- **COVRATIO:** Most values are near 1, suggesting that no single observation is excessively influencing the precision of the estimates.
+- **Standardized Residuals:** Analysis shows most residuals fall within the $[-2, 2]$ range, indicating the absence of extreme outliers that might distort the model.
+- **Cook's Distance:** Using the threshold of $4/n$ ($4/32 = 0.125$), we identify potential influential cases. Observations like the 'Maserati Bora' may have a higher impact on the model parameters.
+- **Leverage Values:** We use the threshold $2(k+1)/n$ where $k=2$ is the number of predictors. $2(3)/32 = 0.1875$. Points above this line have high leverage, meaning they have unusual predictor values.
+- **COVRATIO:** Values far from 1 indicate observations that significantly impact the covariance matrix of the estimates. Most observations in this model are clustered around 1.
 
 ---
 
