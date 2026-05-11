@@ -13,66 +13,84 @@ from statsmodels.graphics.tsaplots import plot_acf
 # Load mtcars dataset
 mtcars = sm.datasets.get_rdataset("mtcars", "datasets", cache=True).data
 
-# a) Linear model
+# Fit model
 model = smf.ols('mpg ~ wt + hp', data=mtcars).fit()
 
-# (i) Fitted model
-# Results: Intercept=37.22727, wt=-3.87783, hp=-0.03177
-
-# b) Regression assumptions plots
-
-# 1. Linearity & Homoscedasticity & Normality
-# We'll regenerate some plots to ensure they match the style requested.
-
-# Linearity Check
-plt.figure(figsize=(12, 4))
-plt.subplot(1, 3, 1)
-plt.scatter(mtcars['wt'], mtcars['mpg'], color='green')
-plt.title('mpg vs wt')
-plt.subplot(1, 3, 2)
-plt.scatter(mtcars['hp'], mtcars['mpg'], color='pink')
-plt.title('mpg vs hp')
-plt.subplot(1, 3, 3)
-sns.residplot(x=model.fittedvalues, y=mtcars['mpg'], lowess=True, line_kws={'color': 'red'})
-plt.title('Residuals vs Fitted')
-plt.tight_layout()
+# Plot 1: Linearity check (Residuals vs Fitted)
+plt.figure(figsize=(8, 6))
+sns.residplot(x=model.fittedvalues, y=mtcars['mpg'], lowess=True,
+              scatter_kws={'alpha': 0.5}, line_kws={'color': 'red', 'lw': 2})
+plt.title('Residuals vs Fitted (Linearity Check)')
+plt.xlabel('Fitted values')
+plt.ylabel('Residuals')
+plt.axhline(0, color='black', linestyle='--', alpha=0.5)
 plt.savefig('linearity_check.png')
 plt.close()
 
-# Independence (ACF)
-plt.figure()
-plot_acf(model.resid)
+# Plot 2: ACF Plot (Independence)
+plt.figure(figsize=(8, 6))
+plot_acf(model.resid, lags=15, title='Autocorrelation Function (ACF) of Residuals')
 plt.savefig('acf_plot.png')
 plt.close()
 
-# Normality & Homoscedasticity
-plt.figure(figsize=(10, 4))
-plt.subplot(1, 2, 1)
-stats.probplot(model.resid, dist="norm", plot=plt)
-plt.title('Normal Q-Q')
-plt.subplot(1, 2, 2)
-plt.scatter(model.fittedvalues, np.sqrt(np.abs(model.get_influence().resid_studentized_internal)))
-plt.title('Scale-Location')
-plt.savefig('homoscedasticity_check.png') # Note: reuse name
-plt.savefig('normality_check.png') # Reuse for report consistency
+# Plot 3: Homoscedasticity (Scale-Location)
+plt.figure(figsize=(8, 6))
+std_resid = np.sqrt(np.abs(model.get_influence().resid_studentized_internal))
+plt.scatter(model.fittedvalues, std_resid, alpha=0.5)
+sns.regplot(x=model.fittedvalues, y=std_resid, lowess=True, scatter=False, line_kws={'color': 'red'})
+plt.title('Scale-Location (Homoscedasticity Check)')
+plt.xlabel('Fitted values')
+plt.ylabel('sqrt(|Standardized Residuals|)')
+plt.savefig('homoscedasticity_check.png')
 plt.close()
 
-# Case Diagnostics
+# Plot 4: Normality (Q-Q and Histogram)
+plt.figure(figsize=(10, 5))
+plt.subplot(1, 2, 1)
+stats.probplot(model.resid, dist="norm", plot=plt)
+plt.title('Normal Q-Q Plot')
+
+plt.subplot(1, 2, 2)
+sns.histplot(model.resid, kde=True, color='lightblue', stat="density")
+# Overlay normal curve
+mu, std = stats.norm.fit(model.resid)
+xmin, xmax = plt.xlim()
+x = np.linspace(xmin, xmax, 100)
+p = stats.norm.pdf(x, mu, std)
+plt.plot(x, p, 'r', linewidth=2)
+plt.title('Histogram of Residuals')
+plt.tight_layout()
+plt.savefig('normality_check.png')
+plt.close()
+
+# Plot 5: Case Diagnostics
 influence = model.get_influence()
 cooks_d = influence.cooks_distance[0]
 leverage = influence.hat_matrix_diag
 
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
+plt.figure(figsize=(10, 8))
+plt.subplot(2, 2, 1)
 plt.stem(cooks_d, markerfmt=" ", basefmt="b-")
 plt.axhline(y=4/32, color='red', linestyle='--')
 plt.title("Cook's Distance")
 
-plt.subplot(1, 2, 2)
+plt.subplot(2, 2, 2)
 plt.stem(leverage, markerfmt=" ", basefmt="b-")
 plt.axhline(y=2*(3)/32, color='blue', linestyle='--')
 plt.title("Leverage Values")
 
+plt.subplot(2, 2, 3)
+plt.scatter(model.fittedvalues, model.resid, alpha=0.5)
+plt.axhline(0, color='red', linestyle='--')
+plt.title("Residuals vs Fitted")
+
+plt.subplot(2, 2, 4)
+plt.plot(influence.cov_ratio, 'o')
+plt.axhline(1, color='green', linestyle='--')
+plt.title("COVRATIO")
+
 plt.tight_layout()
 plt.savefig('case_diagnostics.png')
 plt.close()
+
+print("All plots generated successfully.")
